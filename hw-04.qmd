@@ -1,14 +1,26 @@
 ---
 title: "HW 04"
-author: "INSERT YOUR NAME HERE"
+author: "Lucas Smith"
 format:
   html:
     embed-resources: true
 toc: true
 ---
 
+```{r}
+install.packages("tigris")
+install.packages("readxl")
+install.packages("ggrepel")
+
+```
+
+
 ```{r load-packages, message = FALSE}
 library(tidyverse)
+library(tigris)
+library(sf)
+library(readxl)
+library(ggrepel)
 # add any other packages you use here
 ```
 
@@ -26,6 +38,23 @@ library(tidyverse)
 ```{r}
 #| label: label-me-2
 
+azcounties <- counties("Arizona")
+
+```
+
+```{r}
+ggplot(azcounties) + 
+  geom_sf() + 
+  geom_label(aes(label=NAME, geometry=geometry), stat="sf_coordinates") +
+  theme_minimal() + 
+  labs(
+    x="Longitutde", y="Latitude", title="Counties in Arizona State",
+    caption="Source: Shapefile obtained using {tigris} R package, v2.0.1"
+  ) + 
+   theme(
+    plot.caption = element_text(hjust = 0, size = 8)
+  )
+
 ```
 
 ## 3.  Arizona state of population change
@@ -33,8 +62,70 @@ library(tidyverse)
 ```{r}
 #| label: label-me-3
 
+csvdata <- read_excel("./data/co-est2023-pop-04.xlsx", skip=5, n_max=15, col_names=c(
+  "county", "totalPopulation", "2020", "2021", "2022", "2023"
+))
+csvdata <- csvdata |> 
+  mutate(total_pop_change_20_23 = `2023`-`2020`,
+         county_name =sub(" County,.*", "", county),
+         county=sub(".", "", county_name),
+         total_pop_change_20_23 = case_when (
+           total_pop_change_20_23 > 0 ~ total_pop_change_20_23,
+           total_pop_change_20_23 <= 0 ~ 0
+         )
+)
+
+
+
+joined <- inner_join(azcounties, csvdata, join_by(NAME==county))
+
+ggplot(
+  joined, aes(geometry=geometry, fill=total_pop_change_20_23)
+) + geom_sf( aes(label=NAME, geometry=geometry)) + 
+  theme_minimal() + 
+  scale_color_brewer(palette="RdBu") + 
+  labs(
+    x="Longitutde", y="Latitude", title="Resident Population Change for Counties in AZ",
+    subtitle="July 01, 2020 to July 01, 2023",
+    caption="Source: Shapefile obtained using {tigris R package, v2.0.1\npopulation change data from the US Census Bureau"
+  ) 
+
 ```
 
 ## 4.  Arizona state of Indiginous Tribal Regions
+
+```{r}
+
+a1 <- read_sf("./data/American_Indian_Reservations_in_Arizona.shp")
+
+a2 <- a1 |> filter(
+  NAME %in% c("Hopi Tribe", "Navajo Nation", "White Mountain Apache Tribe", "San Carlos Apache Tribe", "Tohono O'odham Nation Off-Reservation Trust Land")
+) |> mutate(
+  NAME= case_when(
+    NAME=="Tohono O'odham Nation Off-Reservation Trust Land" ~ "Tohono O'odham Nation",
+    TRUE ~NAME
+  )
+)
+
+
+```
+
+
+
+```{r}
+ggplot(azcounties) + geom_sf() + geom_sf(data=a1, aes(label=NAME), linewidth=1, fill="grey") + 
+  geom_label_repel(data=a2, aes(label=NAME, geometry=geometry), 
+                   stat="sf_coordinates", size=4, nudge_x=0, nudge_y=-.5) + 
+  theme_minimal() + labs(
+    x="Longitude", y="Latitude",
+    title="Indigenous Tribal Boundaries in AZ",
+    caption="Source: Shapefile obtained using {tigris} R package, v2.0.1 
+    Indigenous Tribe Shapefile obtained from AZGeo Data"
+  )
+
+
+
+```
+
 
 ## 5. Arizona state of patchwork
