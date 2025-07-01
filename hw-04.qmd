@@ -8,9 +8,15 @@ toc: true
 ---
 
 ```{r}
-install.packages("tigris")
-install.packages("readxl")
-install.packages("ggrepel")
+
+packages <- c("dplyr", "ggplot2", "tigris", "readxl", "ggrepel", "patchwork", "tidyverse", "grid", "gridExtra", "ggplot2", "reshape", "ggalt", "likert", "ggstats", "ggimage", "jpeg" ,"png")
+
+for (pkg in packages) {
+  if (!require(pkg, character.only = TRUE)) {
+    install.packages(pkg)
+    library(pkg, character.only = TRUE)
+  }
+}
 
 ```
 
@@ -20,6 +26,7 @@ library(tidyverse)
 library(tigris)
 library(sf)
 library(readxl)
+library(patchwork)
 library(ggrepel)
 # add any other packages you use here
 ```
@@ -27,8 +34,155 @@ library(ggrepel)
 
 ## 1 - A second chance
 
+I'm taking from homework 3 - DuBois. To compare, here's the original plot I made. 
+
 ```{r}
-#| label: label-me-1
+#| label: dubois
+library(jpeg)
+parchment <- readJPEG("images/parchment.jpg")
+bg <- rasterGrob(parchment, width = unit(1,"npc"), height = unit(1,"npc"))
+
+dubois <- read_csv("data/income.csv")
+db <- pivot_longer(dubois, 
+                   c("Rent", "Food", "Clothes", "Tax", "Other"), 
+                   names_to="income_type", values_to = "percent")
+order <- rev(c("$100-200", 
+               "$200-300", 
+               "$300-400", 
+               "$400-500", 
+               "$500-750", 
+               "$750-1000", 
+               "$1000 AND OVER"
+               )
+             )
+color_vals = c("Rent" = "#141512", "Food" = "#805D7D", 
+               "Clothes" = "#DA907F", "Tax"="#958c82", 
+               "Other"="#BDB39C"
+               )
+x_ordering <- c("Rent", "Food", "Clothes", "Tax", "Other")
+
+plt <- ggplot(db, 
+              aes(x=percent, 
+                  y=Class, 
+                  fill=factor(income_type, 
+                              levels=rev(x_ordering)
+                              ),
+                  )) +    
+  geom_col(position="stack") + 
+  geom_text(aes(label=percent), position = position_stack(vjust = 0.5),
+            size=3)
+
+plt <- plt + 
+        guides(fill=FALSE) + 
+        theme(axis.text.x=element_blank(),
+             axis.title.x=element_blank(),
+             axis.ticks.x=element_blank(), 
+             axis.ticks.y = element_blank(),
+             legend.position = NULL, 
+             plot.margin=margin(0,0,0,0),
+             plot.background = element_blank(),
+             axis.text.y = element_blank(),
+             panel.background=element_blank(),
+             panel.grid.minor=element_blank(),
+             panel.grid.major=element_blank()) + 
+        labs(x="", y="") +
+        scale_y_discrete(limits=order) +
+        scale_fill_manual(values=color_vals) 
+
+tabledata <- dubois |> select(Class, Average_Income)
+tab <- tableGrob(tabledata, rows=NULL, theme=ttheme_default(base_size = 7, 
+                                                           panel.background=element_blank()))
+tab$heights <- unit(rep(1/nrow(tab), nrow(tab) ), "npc")
+
+data <- grid.arrange(
+  arrangeGrob(tab, nullGrob(), heights=c(200, 5)),
+  arrangeGrob(nullGrob(), plt, heights=c(4, 30)),
+  widths=c(3, 8)
+) 
+
+grid.raster(parchment, width=unit(1, "npc"), height=unit(1, "npc"))
+grid.draw(data)
+
+```
+To adjust, I:
+- Added the percent sign
+- Removed the 0's
+- Fixed the black on black text!
+
+```{r}
+#| label: dubois revised
+#| library(jpeg)
+parchment <- readJPEG("images/parchment.jpg")
+bg <- rasterGrob(parchment, width = unit(1,"npc"), height = unit(1,"npc"))
+
+dubois <- read_csv("data/income.csv")
+db <- pivot_longer(dubois, 
+                   c("Rent", "Food", "Clothes", "Tax", "Other"), 
+                   names_to="income_type", values_to = "percent") |> filter(percent > 1)
+
+
+order <- rev(c("$100-200", 
+               "$200-300", 
+               "$300-400", 
+               "$400-500", 
+               "$500-750", 
+               "$750-1000", 
+               "$1000 AND OVER"
+               )
+             )
+color_vals = c("Rent" = "#141512", "Food" = "#805D7D", 
+               "Clothes" = "#DA907F", "Tax"="#958c82", 
+               "Other"="#BDB39C"
+               )
+x_ordering <- c("Rent", "Food", "Clothes", "Tax", "Other")
+
+plt <- ggplot(db, 
+              aes(x=percent, 
+                  y=Class, 
+                  fill=factor(income_type, 
+                              levels=rev(x_ordering)
+                              ),
+                  )) +    
+  geom_col(position="stack") + 
+   geom_text(
+    aes(
+      label = paste0(round(percent, 0), "%"),
+      color = ifelse(income_type == "Rent", "white", "black")
+    ),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) + scale_color_identity()
+
+plt <- plt + 
+        guides(fill=FALSE) + 
+        theme(axis.text.x=element_blank(),
+             axis.title.x=element_blank(),
+             axis.ticks.x=element_blank(), 
+             axis.ticks.y = element_blank(),
+             legend.position = NULL, 
+             plot.margin=margin(0,0,0,0),
+             plot.background = element_blank(),
+             axis.text.y = element_blank(),
+             panel.background=element_blank(),
+             panel.grid.minor=element_blank(),
+             panel.grid.major=element_blank()) + 
+        labs(x="", y="") +
+        scale_y_discrete(limits=order) +
+        scale_fill_manual(values=color_vals) 
+
+tabledata <- dubois |> select(Class, Average_Income)
+tab <- tableGrob(tabledata, rows=NULL, theme=ttheme_default(base_size = 7, 
+                                                           panel.background=element_blank()))
+tab$heights <- unit(rep(1/nrow(tab), nrow(tab) ), "npc")
+
+data <- grid.arrange(
+  arrangeGrob(tab, nullGrob(), heights=c(200, 5)),
+  arrangeGrob(nullGrob(), plt, heights=c(4, 30)),
+  widths=c(3, 8)
+) 
+
+grid.raster(parchment, width=unit(1, "npc"), height=unit(1, "npc"))
+grid.draw(data)
 
 ```
 
@@ -43,6 +197,7 @@ azcounties <- counties("Arizona")
 ```
 
 ```{r}
+#| label: graph for q2
 ggplot(azcounties) + 
   geom_sf() + 
   geom_label(aes(label=NAME, geometry=geometry), stat="sf_coordinates") +
@@ -60,7 +215,7 @@ ggplot(azcounties) +
 ## 3.  Arizona state of population change
 
 ```{r}
-#| label: label-me-3
+#| label: graph for q3
 
 csvdata <- read_excel("./data/co-est2023-pop-04.xlsx", skip=5, n_max=15, col_names=c(
   "county", "totalPopulation", "2020", "2021", "2022", "2023"
@@ -79,32 +234,29 @@ csvdata <- csvdata |>
 
 joined <- inner_join(azcounties, csvdata, join_by(NAME==county))
 
+maxi <- max(joined$total_pop_change_20_23)
+mini <- min(joined$total_pop_change_20_23)
 ggplot(
   joined, aes(geometry=geometry, fill=total_pop_change_20_23)
-) + geom_sf( aes(label=NAME, geometry=geometry)) + 
+) + geom_sf( aes(label=NAME, geometry=geometry), color="white") + 
   theme_minimal() + 
-  scale_color_brewer(palette="RdBu") + 
   labs(
     x="Longitutde", y="Latitude", title="Resident Population Change for Counties in AZ",
     subtitle="July 01, 2020 to July 01, 2023",
     caption="Source: Shapefile obtained using {tigris R package, v2.0.1\npopulation change data from the US Census Bureau"
-  ) 
+  )  + 
+  scale_fill_gradient2(midpoint=(maxi - mini) / 2, low="dodgerblue3", high="firebrick") 
 
 ```
 
 ## 4.  Arizona state of Indiginous Tribal Regions
 
 ```{r}
-
+#| label: reading data for q4
 a1 <- read_sf("./data/American_Indian_Reservations_in_Arizona.shp")
 
 a2 <- a1 |> filter(
-  NAME %in% c("Hopi Tribe", "Navajo Nation", "White Mountain Apache Tribe", "San Carlos Apache Tribe", "Tohono O'odham Nation Off-Reservation Trust Land")
-) |> mutate(
-  NAME= case_when(
-    NAME=="Tohono O'odham Nation Off-Reservation Trust Land" ~ "Tohono O'odham Nation",
-    TRUE ~NAME
-  )
+  NAME %in% c("Hopi Tribe", "Navajo Nation", "White Mountain Apache Tribe", "San Carlos Apache Tribe", "Tohono O’odham Nation")
 )
 
 
@@ -113,7 +265,8 @@ a2 <- a1 |> filter(
 
 
 ```{r}
-ggplot(azcounties) + geom_sf() + geom_sf(data=a1, aes(label=NAME), linewidth=1, fill="grey") + 
+#| label: visualizing q4
+ggplot(azcounties) + geom_sf() + geom_sf(data=a1, aes(label=NAME), linewidth=1, fill="lightgrey", color="black") + 
   geom_label_repel(data=a2, aes(label=NAME, geometry=geometry), 
                    stat="sf_coordinates", size=4, nudge_x=0, nudge_y=-.5) + 
   theme_minimal() + labs(
@@ -129,3 +282,64 @@ ggplot(azcounties) + geom_sf() + geom_sf(data=a1, aes(label=NAME), linewidth=1, 
 
 
 ## 5. Arizona state of patchwork
+```{r}
+#| label: filtering data for q5
+selected_tribes <- a1 |> filter(
+  startsWith(NAME, "White M") | startsWith(NAME, "San Carlos") |
+    NAME == "Tohono O’odham Nation"
+)
+
+selected_counties <- azcounties |> filter(
+  startsWith(NAME, "Maricopa") | startsWith(NAME, "Pinal") |  startsWith(NAME, "Pima")
+)
+
+
+inset_plotted_counties <- azcounties |>  filter(
+  startsWith(NAME, "Maricopa") | startsWith(NAME, "Pinal") |  startsWith(NAME, "Pima") | startsWith(NAME, "Santa Cruz") | startsWith(NAME, "Yavapai") | startsWith(NAME, "Gila"))
+
+```
+
+
+```{r}
+#| label: visualizing q5
+inset <- ggplot(
+  joined, aes(geometry=geometry, fill=total_pop_change_20_23)
+) + geom_sf( aes(label=NAME, geometry=geometry), color="white")  + 
+  scale_fill_gradient2(midpoint=(maxi - mini) / 2, low="dodgerblue3", high="firebrick")  +
+  geom_sf(data=selected_tribes, linewidth=1, fill="lightgrey", color="black") + 
+  geom_label_repel(data=selected_tribes, aes(label=NAME, geometry=geometry), inherit.aes = FALSE, nudge_x = 1, nudge_y = .5, stat="sf_coordinates", size=3) +
+  coord_sf(xlim=c(-114, -110.5), ylim=c(31, 34)) + theme_minimal() + 
+  labs(x="", y="") + 
+  theme(
+    axis.ticks.x=element_blank(),
+    axis.text.x=element_blank(),
+    axis.ticks.y=element_blank(),
+    axis.text.y=element_blank(),
+    panel.background=element_rect(fill="darkgrey"),
+    panel.grid.major=element_blank(),
+    plot.margin=margin(0, 20, 0, 0),
+    legend.position="None"
+  )
+
+
+main <- ggplot(
+  joined, aes(geometry=geometry, fill=total_pop_change_20_23)
+) + geom_sf( aes(label=NAME, geometry=geometry), color="white") + coord_sf(xlim=c(-122, -109), ylim=c(28, 37)) + 
+  scale_fill_gradient2(midpoint=(maxi - mini) / 2, low="dodgerblue3", high="firebrick")  + 
+  labs(fill = "Population Change",
+       x="Longitude", y="Latitude",
+       title="Resident Population Change for Counties in Arizona",
+       subtitle="July 01, 2020 to July 01, 2023",
+       caption="Source: Shapefile obtained using {tigris} R package, v.2.0.1\npopulation change data from the US Census Bureau\nIndigenous Tribe Shapefil obtained from AZGeo Data") +
+  theme(
+    legend.position=c(.2, .85),
+    legend.direction="horizontal",
+    legend.background = element_blank(),
+    legend.box.background = element_blank()
+  ) +
+  guides(fill = guide_colorbar(title.position = "top"))
+
+
+main + inset_element(inset,-.088, -.06, .5, .5)
+``` 
+
