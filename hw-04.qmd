@@ -34,7 +34,7 @@ library(ggrepel)
 
 ## 1 - A second chance
 
-I'm taking from homework 3 - DuBois. To compare, here's the original plot I made. 
+I'm taking from homework 3 - DuBois. To compare, here's the original plot I made. I chose this plot because it was not only challenging, but there were some things that I wanted to improve on. Getting the colors and everything lined up was a challenging aspect, but I think that making the final touches on it was something that I just didn't have time for. 
 
 ```{r}
 #| label: dubois
@@ -243,7 +243,8 @@ ggplot(
   labs(
     x="Longitutde", y="Latitude", title="Resident Population Change for Counties in AZ",
     subtitle="July 01, 2020 to July 01, 2023",
-    caption="Source: Shapefile obtained using {tigris R package, v2.0.1\npopulation change data from the US Census Bureau"
+    caption="Source: Shapefile obtained using {tigris R package, v2.0.1\npopulation change data from the US Census Bureau",
+    fill = "Population Change"
   )  + 
   scale_fill_gradient2(midpoint=(maxi - mini) / 2, low="dodgerblue3", high="firebrick") 
 
