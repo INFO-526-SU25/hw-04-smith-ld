@@ -241,7 +241,7 @@ ggplot(
 ) + geom_sf( aes(label=NAME, geometry=geometry), color="white") + 
   theme_minimal() + 
   labs(
-    x="Longitutde", y="Latitude", title="Resident Population Change for Counties in AZ",
+    x="Longitude", y="Latitude", title="Resident Population Change for Counties in AZ",
     subtitle="July 01, 2020 to July 01, 2023",
     caption="Source: Shapefile obtained using {tigris R package, v2.0.1\npopulation change data from the US Census Bureau",
     fill = "Population Change"
