@@ -111,7 +111,7 @@ To adjust, I:
 
 ```{r}
 #| label: dubois revised
-#| library(jpeg)
+library(jpeg)
 parchment <- readJPEG("images/parchment.jpg")
 bg <- rasterGrob(parchment, width = unit(1,"npc"), height = unit(1,"npc"))
 
